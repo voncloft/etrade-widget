@@ -1,0 +1,18 @@
+{
+  "KPackageStructure": "Plasma/Applet",
+  "KPlugin": {
+    "Id": "org.von.etrade",
+    "Name": "E*TRADE Portfolio",
+    "Description": "Shows your E*TRADE portfolio, gains/losses, and a trailing value chart.",
+    "Version": "0.1.0",
+    "License": "GPL-3.0-or-later",
+    "Authors": [
+      {
+        "Name": "OpenAI Codex"
+      }
+    ]
+  },
+  "X-Plasma-API-Minimum-Version": "6.0",
+  "X-Plasma-API": "declarativeappletscript",
+  "X-Plasma-MainScript": "ui/main.qml"
+}
