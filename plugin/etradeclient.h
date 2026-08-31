@@ -3,6 +3,7 @@
 #include <QDateTime>
 #include <QMap>
 #include <QNetworkAccessManager>
+#include <QTimer>
 #include <QObject>
 #include <QVariantList>
 
@@ -47,6 +48,7 @@ class ETradeClient : public QObject {
     Q_PROPERTY(QVariantList accounts READ accounts NOTIFY accountsChanged)
     Q_PROPERTY(QString selectedAccountLabel READ selectedAccountLabel NOTIFY accountsChanged)
     Q_PROPERTY(QString trackingStartLabel READ trackingStartLabel NOTIFY chartPointsChanged)
+    Q_PROPERTY(QString lastUpdatedText READ lastUpdatedText NOTIFY lastUpdatedChanged)
     Q_PROPERTY(int refreshMinutes READ refreshMinutes WRITE setRefreshMinutes NOTIFY refreshMinutesChanged)
     Q_PROPERTY(int chartMonths READ chartMonths WRITE setChartMonths NOTIFY chartMonthsChanged)
 
@@ -85,6 +87,7 @@ public:
     QVariantList accounts() const { return m_accounts; }
     QString selectedAccountLabel() const;
     QString trackingStartLabel() const;
+    QString lastUpdatedText() const;
     int refreshMinutes() const { return m_refreshMinutes; }
     int chartMonths() const { return m_chartMonths; }
 
@@ -119,6 +122,7 @@ signals:
     void positionsChanged();
     void chartPointsChanged();
     void accountsChanged();
+    void lastUpdatedChanged();
     void refreshMinutesChanged();
     void chartMonthsChanged();
 
@@ -150,6 +154,8 @@ private:
     void setLoading(bool loading);
     void setLastError(const QString &lastError);
     void setStatusText(const QString &statusText);
+    void setLastUpdated(const QDateTime &lastUpdated);
+    void updateRefreshTimer();
 
     QString configFilePath() const;
     QString historyFilePath() const;
@@ -228,6 +234,8 @@ private:
     QDate m_trackingStartDate;
     double m_trackingBaselineValue = 0.0;
     QDate m_lastTransactionSyncDate;
+    QTimer m_refreshTimer;
+    QDateTime m_lastUpdated;
     int m_refreshMinutes = 15;
     int m_chartMonths = 3;
     RefreshStage m_refreshStage = RefreshStage::Idle;

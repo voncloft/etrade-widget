@@ -219,7 +219,7 @@ PlasmoidItem {
                                     { title: "Today", value: signedMoney(client.todaysGainLoss), detail: signedPercent(client.todaysGainLossPct), tone: metricColor(client.todaysGainLoss) },
                                     { title: "Invested in holdings", value: "$" + money(client.positionsValue), detail: client.positions.length + " positions" },
                                     { title: "Cash balance", value: "$" + money(client.cashBalance), detail: "Available cash now" },
-                                    { title: "Refresh state", value: client.loading ? "Updating..." : "Current", detail: client.loading ? "Pulling latest E*TRADE data" : "Cards show the latest refresh" }
+                                    { title: "Last updated", value: client.lastUpdatedText, detail: client.loading ? "Refreshing now..." : "Auto refresh every " + client.refreshMinutes + " min" }
                                 ]
 
                                 delegate: PC3.Frame {

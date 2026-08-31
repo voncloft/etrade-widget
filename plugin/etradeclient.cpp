@@ -55,6 +55,16 @@ QString transactionQueryDate(const QDate &date) {
 
 ETradeClient::ETradeClient(QObject *parent)
     : QObject(parent) {
+    m_refreshTimer.setSingleShot(false);
+    connect(&m_refreshTimer, &QTimer::timeout, this, [this]() {
+        if (m_loading || !authenticated() || m_consumerKey.isEmpty() || m_consumerSecret.isEmpty()) {
+            return;
+        }
+
+        writeLog(QStringLiteral("auto_refresh tick minutes=%1").arg(QString::number(m_refreshMinutes)));
+        refresh();
+    });
+    updateRefreshTimer();
 }
 
 bool ETradeClient::authenticated() const {
@@ -84,6 +94,19 @@ QString ETradeClient::trackingStartLabel() const {
     return m_trackingStartDate.isValid()
         ? m_trackingStartDate.toString(QStringLiteral("MMM d, yyyy"))
         : QString();
+}
+
+QString ETradeClient::lastUpdatedText() const {
+    if (!m_lastUpdated.isValid()) {
+        return QStringLiteral("Never");
+    }
+
+    const auto local = m_lastUpdated.toLocalTime();
+    if (local.date() == QDate::currentDate()) {
+        return QStringLiteral("Today %1").arg(local.time().toString(QStringLiteral("h:mm AP")));
+    }
+
+    return local.toString(QStringLiteral("MMM d, h:mm AP"));
 }
 
 void ETradeClient::setSandbox(bool sandbox) {
@@ -132,6 +155,7 @@ void ETradeClient::setRefreshMinutes(int refreshMinutes) {
         return;
     }
     m_refreshMinutes = bounded;
+    updateRefreshTimer();
     emit refreshMinutesChanged();
 }
 
@@ -167,6 +191,20 @@ void ETradeClient::setStatusText(const QString &statusText) {
     }
     m_statusText = statusText;
     emit statusTextChanged();
+}
+
+void ETradeClient::setLastUpdated(const QDateTime &lastUpdated) {
+    if (m_lastUpdated == lastUpdated) {
+        return;
+    }
+
+    m_lastUpdated = lastUpdated;
+    emit lastUpdatedChanged();
+}
+
+void ETradeClient::updateRefreshTimer() {
+    m_refreshTimer.stop();
+    m_refreshTimer.start(m_refreshMinutes * 60 * 1000);
 }
 
 QString ETradeClient::configFilePath() const {
@@ -236,6 +274,8 @@ void ETradeClient::loadSettings() {
     }
     emit accessTokenChanged();
 
+    setLastUpdated(QDateTime::fromString(root.value(QStringLiteral("lastUpdated")).toString(), Qt::ISODate));
+
     loadHistory();
     updateChartPoints();
     setLastError({});
@@ -265,6 +305,9 @@ bool ETradeClient::saveSettings() {
     root.insert(QStringLiteral("loginUrl"), m_loginUrl);
     root.insert(QStringLiteral("accessToken"), m_accessToken);
     root.insert(QStringLiteral("accessTokenSecret"), m_accessTokenSecret);
+    if (m_lastUpdated.isValid()) {
+        root.insert(QStringLiteral("lastUpdated"), m_lastUpdated.toUTC().toString(Qt::ISODate));
+    }
     root.insert(QStringLiteral("refreshMinutes"), m_refreshMinutes);
     root.insert(QStringLiteral("chartMonths"), m_chartMonths);
 
@@ -307,6 +350,7 @@ void ETradeClient::clearSession() {
     m_lastTransactionSyncDate = {};
     m_history.clear();
     m_chartPoints.clear();
+    setLastUpdated({});
     emit requestTokenChanged();
     emit loginUrlChanged();
     emit accessTokenChanged();
@@ -1059,6 +1103,7 @@ void ETradeClient::processPortfolioReply(QNetworkReply *reply) {
     m_todaysGainLossPct = todaysGainLossPct;
 
     appendSnapshot(totalValue);
+    setLastUpdated(QDateTime::currentDateTime());
     saveSettings();
 
     emit positionsChanged();
@@ -1588,6 +1633,7 @@ void ETradeClient::loadDemoData() {
         m_trackingBaselineValue = m_history.first().value;
     }
     updateChartPoints();
+    setLastUpdated(QDateTime::currentDateTime());
     setStatusText(QStringLiteral("Loaded demo portfolio data."));
     setLastError({});
     writeLog(QStringLiteral("demo data loaded"));
